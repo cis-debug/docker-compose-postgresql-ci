@@ -1,11 +1,11 @@
 # 🚀 Docker Compose + PostgreSQL + CI/CD
-
-
-
-
-
-
-\
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-API-black?logo=flask&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker&logoColor=white)
+![Docker Compose](https://img.shields.io/badge/Docker%20Compose-Multi--Container-2496ED?logo=docker&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?logo=githubactions&logoColor=white)
+![Pytest](https://img.shields.io/badge/Pytest-Tests-0A9EDC?logo=pytest&logoColor=white)
 
 ## 📌 Description
 
