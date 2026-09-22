@@ -1,22 +1,85 @@
-      - name: Wait for API and DB, then test endpoints
+name: CI - pytest + Docker Compose (PostgreSQL)
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test-and-compose:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Récupérer le code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2) Installer Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 3) Installer dépendances + lancer les tests unitaires
+      - name: Install dependencies
         run: |
-          # Attendre jusqu'à 60s que /health soit OK (DB connectée)
+          python -m pip install --upgrade pip
+          python -m pip install -r api/requirements.txt
+          python -m pip install pytest
+
+      - name: Run unit tests
+        run: |
+          pytest -q
+
+      # 4) Installer docker-compose (binaire)
+      - name: Install docker-compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      # 5) Build + up de la stack (API + PostgreSQL)
+      - name: Docker Compose up
+        run: |
+          docker-compose up -d --build
+          docker-compose ps
+
+      # 6) Attendre que /health soit OK (API + DB ready), sinon afficher logs
+      - name: Wait for /health then run integration checks
+        run: |
+          set -e
+
+          echo "Waiting for /health to become OK..."
+          ok=0
+
           for i in $(seq 1 60); do
-            if curl -s http://localhost:5000/health | grep -q '"status":"ok"'; then
-              echo "Health is OK (API + DB ready)"
+            code=$(curl -s -o /tmp/health.json -w "%{http_code}" http://localhost:5000/health || true)
+            body=$(cat /tmp/health.json 2>/dev/null || true)
+            echo "Try $i: HTTP $code - $body"
+
+            if [ "$code" = "200" ] && echo "$body" | grep -q '"status":"ok"'; then
+              ok=1
               break
             fi
-            echo "Waiting for /health... ($i)"
+
             sleep 1
           done
+
+          if [ "$ok" -ne 1 ]; then
+            echo "ERROR: /health never became OK"
+            docker-compose ps
+            docker-compose logs --no-color --tail=200
+            exit 1
+          fi
 
           echo "Test /"
           curl -s http://localhost:5000/ | grep -q "API is running"
 
           echo "Test /health"
           curl -s http://localhost:5000/health | grep -q '"status":"ok"'
-      - name: Debug logs (only if failed)
-        if: failure()
+
+      # 7) Toujours nettoyer (même si échec)
+      - name: Docker Compose down
+        if: always()
         run: |
-          docker-compose ps
-          docker-compose logs --no-color --tail=200
+          docker-compose down -v --remove-orphans
